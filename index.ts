@@ -1,9 +1,10 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
 interface RetryEnhanceConfig {
+  enabled?: boolean;
   hosts?: string[];
   retryableStatusCodes?: number[];
   retryablePatterns?: string[];
@@ -12,6 +13,7 @@ interface RetryEnhanceConfig {
 }
 
 const DEFAULT_CONFIG: Required<RetryEnhanceConfig> = {
+  enabled: false,
   hosts: [],
   retryableStatusCodes: [429],
   retryablePatterns: ["insufficient_quota", "quota exceeded", "rate limit", "too many requests"],
@@ -21,17 +23,22 @@ const DEFAULT_CONFIG: Required<RetryEnhanceConfig> = {
 
 const CONFIG_PATH = join(homedir(), ".pi", "agent", "pi-retry-enhance.json");
 
-function readConfig(): Required<RetryEnhanceConfig> {
+function ensureConfigFile(): Required<RetryEnhanceConfig> {
+  const dir = join(homedir(), ".pi", "agent");
+
   if (!existsSync(CONFIG_PATH)) {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2) + "\n", "utf-8");
     return DEFAULT_CONFIG;
   }
 
   try {
     const raw = JSON.parse(readFileSync(CONFIG_PATH, "utf-8"));
 
-    return {
+    const merged: Required<RetryEnhanceConfig> = {
       ...DEFAULT_CONFIG,
       ...raw,
+      enabled: typeof raw?.enabled === "boolean" ? raw.enabled : DEFAULT_CONFIG.enabled,
       hosts: Array.isArray(raw?.hosts) ? raw.hosts : DEFAULT_CONFIG.hosts,
       retryableStatusCodes: Array.isArray(raw?.retryableStatusCodes)
         ? raw.retryableStatusCodes.map(Number)
@@ -44,7 +51,11 @@ function readConfig(): Required<RetryEnhanceConfig> {
         : DEFAULT_CONFIG.retryableCodes,
       maxBodyChars: typeof raw?.maxBodyChars === "number" ? raw.maxBodyChars : DEFAULT_CONFIG.maxBodyChars,
     };
+
+    return merged;
   } catch {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2) + "\n", "utf-8");
     return DEFAULT_CONFIG;
   }
 }
@@ -79,11 +90,11 @@ function responseMatches(response: Response, bodyText: string, config: Required<
 
 export default function (pi: ExtensionAPI) {
   const originalFetch = globalThis.fetch;
-  const config = readConfig();
+  const config = ensureConfigFile();
 
   globalThis.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
     return originalFetch(input, init).then(async (response) => {
-      if (response.status < 400) {
+      if (!config.enabled || response.status < 400) {
         return response;
       }
 
