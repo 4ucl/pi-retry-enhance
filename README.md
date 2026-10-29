@@ -1,20 +1,52 @@
 # pi-retry-enhance
 
-A small Pi extension that rewrites `insufficient_quota` errors into a native retryable `429` so Pi's built-in retry logic can keep retrying without replacing Pi's own retry engine.
+A small Pi extension that keeps Pi's built-in retry behavior intact while rewriting provider responses that match your configured retry policy into a native retryable `429`.
 
-Why this exists
-- Pi's native retry logic retries `429` and other retryable transport errors.
-- Some providers report quota exhaustion as `insufficient_quota` instead of a classic retryable throttle.
-- This extension converts that case into a Pi-native retryable error shape by setting:
-  - HTTP status: `429`
-  - header: `x-should-retry: true`
-  - header: `retry-after-ms: 1000`
+This extension does not read Pi settings. It uses its own config file under:
 
-This keeps Pi's built-in retry behavior intact while making transient quota exhaustion behave like a retryable condition.
+```bash
+~/.pi/agent/pi-retry-enhance.json
+```
+
+Why `retryDelayMs` exists
+- `retryDelayMs` is not a standalone Pi retry policy.
+- It is only used to set the rewritten response header `retry-after-ms`.
+- Pi's own retry code honors `retry-after-ms` when present, before falling back to its own exponential backoff.
+- In other words: this setting does not replace Pi's retry engine; it only tells Pi how long to wait for this rewritten retryable error.
+
+Default config file
+
+```json
+{
+  "hosts": [],
+  "retryableStatusCodes": [429],
+  "retryablePatterns": [
+    "insufficient_quota",
+    "quota exceeded",
+    "rate limit",
+    "too many requests"
+  ],
+  "retryableCodes": [
+    "insufficient_quota"
+  ],
+  "retryDelayMs": 1000,
+  "maxBodyChars": 4000
+}
+```
+
+Notes
+- `hosts: []` means apply to all hosts.
+- If you want this extension to only affect a subset of providers, list those hostnames.
+- `retryableStatusCodes`, `retryablePatterns`, and `retryableCodes` are combined with OR semantics.
+- Only responses matching one of these checks get rewritten into a retryable `429`.
 
 Install
 
-Option 1: copy directly into Pi's extension directory
+```bash
+pi install https://github.com/4ucl/pi-retry-enhance
+```
+
+Or if you want to test locally without installing the package:
 
 ```bash
 mkdir -p ~/.pi/agent/extensions
@@ -26,18 +58,3 @@ Then reload Pi:
 ```bash
 pi --reload
 ```
-
-Option 2: use as a package via GitHub
-
-```bash
-pi install https://github.com/4ucl/pi-retry-enhance
-```
-
-Files
-- `index.ts` — the extension entry point
-- `package.json` — metadata for Pi package discovery
-
-Notes
-- This extension is intentionally narrow: it only rewrites `insufficient_quota`.
-- Other errors are left alone.
-- It does not replace Pi's built-in retry loop; it simply makes the provider error look retryable to Pi.
