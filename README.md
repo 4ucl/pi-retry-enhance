@@ -8,10 +8,13 @@ This extension does not read Pi settings. It uses its own config file under:
 ~/.pi/agent/pi-retry-enhance.json
 ```
 
+If the file does not exist, the extension creates it automatically with a default configuration where the total switch is off.
+
 Default config file
 
 ```json
 {
+  "enabled": false,
   "hosts": [],
   "retryableStatusCodes": [429],
   "retryablePatterns": [
@@ -28,10 +31,12 @@ Default config file
 ```
 
 Notes
+- `enabled: false` is the default. Nothing is rewritten until you turn it on.
 - `hosts: []` means apply to all hosts.
 - If you want this extension to only affect a subset of providers, list those hostnames.
 - `retryableStatusCodes`, `retryablePatterns`, and `retryableCodes` are combined with OR semantics.
 - Only responses matching one of these checks get rewritten into a retryable `429`.
+- This extension does not replace Pi's built-in retry engine. It only transforms a matched response into a form Pi already knows how to retry.
 
 Install
 
