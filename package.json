@@ -1,0 +1,12 @@
+{
+  "name": "pi-retry-enhance",
+  "version": "0.1.0",
+  "description": "Pi extension that rewrites insufficient_quota into a native retryable 429 so Pi's built-in retry loop handles it.",
+  "license": "MIT",
+  "type": "module",
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
