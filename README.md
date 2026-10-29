@@ -8,12 +8,6 @@ This extension does not read Pi settings. It uses its own config file under:
 ~/.pi/agent/pi-retry-enhance.json
 ```
 
-Why `retryDelayMs` exists
-- `retryDelayMs` is not a standalone Pi retry policy.
-- It is only used to set the rewritten response header `retry-after-ms`.
-- Pi's own retry code honors `retry-after-ms` when present, before falling back to its own exponential backoff.
-- In other words: this setting does not replace Pi's retry engine; it only tells Pi how long to wait for this rewritten retryable error.
-
 Default config file
 
 ```json
@@ -29,7 +23,6 @@ Default config file
   "retryableCodes": [
     "insufficient_quota"
   ],
-  "retryDelayMs": 1000,
   "maxBodyChars": 4000
 }
 ```
