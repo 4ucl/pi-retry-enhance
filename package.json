@@ -1,12 +1,29 @@
 {
   "name": "pi-retry-enhance",
-  "version": "0.1.0",
-  "description": "Pi extension that rewrites insufficient_quota into a native retryable 429 so Pi's built-in retry loop handles it.",
+  "version": "0.2.0",
+  "description": "Pi extension that makes Pi's built-in retry loop retry quota/billing failures (e.g. insufficient_quota) instead of giving up.",
   "license": "MIT",
   "type": "module",
+  "keywords": [
+    "pi-package"
+  ],
   "pi": {
     "extensions": [
       "./index.ts"
     ]
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types test/rewrite.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "^1.4.0",
+    "@earendil-works/pi-coding-agent": "^1.4.0",
+    "@types/node": "^22.19.0",
+    "typescript": "^5.9.0"
   }
 }
